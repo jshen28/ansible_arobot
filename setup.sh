@@ -20,61 +20,24 @@ if [[ -d "$cache_path" ]]; then
     rm -rf $cache_path
 fi
 contrib_path=$base_path/contrib
-cp $contrib_path/arobot_cache.tar /tmp
-cp $contrib_path/irorpms.tar /tmp
+cp $contrib_path/arobot_deps.tar /tmp
 cd /tmp
-tar -xvf arobot_cache.tar
-tar -xvf irorpms.tar
+tar -xvf arobot_deps.tar
 
 # Generate local repo
 cd $yum_repo_path
 cat << EOF > local.repo
-[base]
-name=base
-baseurl=file:///tmpcache/base
-gpgcheck=0
-enabled=1
-
-[epel]
-name=epel
-baseurl=file:///tmp/cache/epel
-gpgcheck=0
-enabled=1
-
-[extras]
-name=extras
-baseurl=file:///tmp/cache/extras
-gpgcheck=0
-enabled=1
-
-[updates]
-name=updates
-baseurl=file:///tmp/cache/updates
-gpgcheck=0
-enabled=1
-
-[newton]
-name=newton
-baseurl=file:///tmp/cache/newton
+[local]
+name=local
+baseurl=file:///tmp/arobot_deps
 gpgcheck=0
 enabled=1
 
 EOF
 
-# Install createrepo and ansible
+# Install ansible
 cd ~
-yum install -y ansible createrepo
-
-# Createrepo for ironic related rpms
-createrepo /tmp/irorpms
-cat << EOF >> $yum_repo_path/local.repo
-[irorpms]
-name=irorpms
-baseurl=file:///tmp/irorpms
-gpgcheck=0
-enabled=1
-
-EOF
+yum install -y ansible
 
 # Execute ansible scripts
 cd $base_path

@@ -29,7 +29,7 @@
     - { section: DEFAULT, option: rootwrap_config, value: /etc/ironic-inspector/rootwrap.conf }
     - { section: DEFAULT, option: auth_strategy, value: noauth }
     - { section: DEFAULT, option: log_dir, value: /var/log/ironic-inspector }
-    - { section: database, option: connection, value: 'mysql+pymysql://ironic_inspector:"{{ passwords.db_root_pass }}"@127.0.0.1/ironic_inspector?charset=utf8' }
+    - { section: database, option: connection, value: 'mysql+pymysql://ironic_inspector:{{ passwords.db_root_pass }}@127.0.0.1/ironic_inspector?charset=utf8' }
     - { section: discovery, option: enroll_node_driver, value: pxe_ipmitool }
     - { section: discovery, option: ipmi_username, value: admin }
     - { section: discovery, option: ipmi_password, value: "{{ passwords.ipmi_admin_pass }}" }
