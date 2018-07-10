@@ -1,0 +1,54 @@
+---
+
+- name: Create tftpboot directory
+  file:
+    path: /tftpboot
+    state: directory
+    owner: ironic
+
+- name: Install related packages
+  yum:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - tftp-server
+    - syslinux-tftpboot
+    - xinetd
+
+- name: Create tftp configuration
+  copy:
+    src: files/tftp
+    dest: /etc/xinetd.d/tftp
+
+- name: Start tftp server
+  service:
+    name: xinetd
+    enabled: yes
+    state: restarted
+
+- name: Copy pxelinux.0 to /tftpboot
+  command: cp /usr/share/syslinux/pxelinux.0 /tftpboot/
+
+- name: Create map-file
+  copy:
+    src: files/map-file
+    dest: /tftpboot/map-file
+
+- name: Create deploy dir
+  file:
+    path: /tftpboot/deploy
+    state: directory
+
+- name: Create pxelinux.cfg directories
+  file:
+    path: /tftpboot/pxelinux.cfg
+    state: directory
+    owner: ironic
+
+- name: Download deploy kernel and ramdisk
+  copy:
+    src: "{{ item }}"
+    dest: /tftpboot/deploy
+  with_items:
+    - files/deploy.vmlinuz
+    - files/deploy.initramfs

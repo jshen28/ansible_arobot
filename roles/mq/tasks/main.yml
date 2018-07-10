@@ -1,0 +1,21 @@
+---
+
+- name: Install related packages for rabbitmq
+  yum:
+    name: rabbitmq-server
+    state: latest
+
+- name: Start rabbitmq-server service
+  service:
+    name: rabbitmq-server
+    enabled: yes
+    state: started
+
+- name: Add openstack rabbitmq user
+  rabbitmq_user:
+    name: arobot
+    password: "{{ passwords.mq_arobot_pass }}"
+    configure_priv: .*
+    read_priv: .*
+    write_priv: .*
+    state: present

@@ -1,0 +1,79 @@
+---
+
+- name: Create ironic database
+  mysql_db:
+    name: ironic
+    state: present
+    encoding: utf8
+    login_user: root
+    login_password: "{{ passwords.db_root_pass }}"
+
+- name: Grant all privileges for ironic
+  command: 'mysql -uroot -p{{ passwords.db_root_pass }} -ne "{{ item }}"'
+  with_items:
+    - GRANT ALL PRIVILEGES ON ironic.* TO 'ironic'@'localhost' IDENTIFIED BY '{{ passwords.db_root_pass }}'
+    - GRANT ALL PRIVILEGES ON ironic.* TO 'ironic'@'%' IDENTIFIED BY '{{ passwords.db_root_pass }}'
+
+- name: Install related packages for ironic
+  yum:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - openstack-ironic-api
+    - openstack-ironic-conductor
+    - python-ironicclient
+    - python-ironic-inspector-client
+
+- name: Configurate ironic.conf
+  ini_file:
+    path: /etc/ironic/ironic.conf
+    section: "{{ item.section }}"
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+  with_items:
+    - { section: DEFAULT, option: my_ip, value: 127.0.0.1 }
+    - { section: DEFAULT, option: enabled_drivers, value: pxe_ipmitool }
+    - { section: DEFAULT, option: auth_strategy, value: noauth }
+    - { section: DEFAULT, option: transport_url, value: 'rabbit://arobot:"{{ passwords.mq_arobot_pass }}"@127.0.0.1' }
+    - { section: DEFAULT, option: log_dir, value: /var/log/ironic }
+    - { section: conductor, option: api_url, value: 'http://127.0.0.1:6385' }
+    - { section: database, option: connection, value: 'mysql+pymysql://ironic:"{{ passwords.db_root_pass }}"@127.0.0.1/ironic?charset=utf8' }
+    - { section: dhcp, option: dhcp_provider, value: none }
+    - { section: inspector, option: enabled, value: true }
+
+- name: Sync ironic db
+  command: ironic-dbsync --config-file /etc/ironic/ironic.conf create_schema
+  ignore_errors: True
+
+- name: Start related ironic services
+  service:
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+  with_items:
+    - openstack-ironic-api
+    - openstack-ironic-conductor
+
+- include: setup_tftp_server.yml
+
+- name: Install dhcp package
+  yum:
+    name: dhcp
+    state: latest
+
+- name: Create dhcp configuration file
+  template:
+    src: roles/ironic/templates/dhcpd.conf.j2
+    dest: /etc/dhcp/dhcpd.conf
+
+- name: Start dhcp service
+  service:
+    name: dhcpd
+    state: started
+    enabled: yes
+  ignore_errors: True
+
+- name: Create ironic env file
+  template:
+    src: roles/ironic/templates/admin.rc.j2
+    dest: /root/admin.rc

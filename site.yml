@@ -1,0 +1,57 @@
+---
+
+- name: Get start timestamp
+  hosts: deploy
+  connection: local
+  tasks:
+    - set_fact:
+        starttime: "{{ ansible_date_time }}"
+
+- name: Setup database
+  hosts: deploy
+  connection: local
+  vars_files:
+    - "vars/env.yml"
+  roles:
+    - db
+
+- name: Setup message queue server
+  hosts: deploy
+  connection: local
+  vars_files:
+    - "vars/env.yml"
+  roles:
+    - mq
+
+- name: Setup ironic server
+  hosts: deploy
+  connection: local
+  vars_files:
+    - "vars/env.yml"
+  roles:
+    - ironic
+
+- name: Setup ironic-inspector server
+  hosts: deploy
+  connection: local
+  vars_files:
+    - "vars/env.yml"
+  roles:
+    - ironic-inspector
+
+- name: Setup arobot server
+  hosts: deploy
+  connection: local
+  vars_files:
+    - "vars/env.yml"
+  roles:
+    - arobot
+
+- name: Inform the installer
+  hosts: deploy
+  connection: local
+  tasks:
+    - debug:
+        msg: >-
+          The deploy started at {{ hostvars.deploy.starttime.time }},
+          ended at {{ ansible_date_time.time }}

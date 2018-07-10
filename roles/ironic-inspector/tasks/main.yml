@@ -1,0 +1,63 @@
+---
+
+- name: Create ironic_inspector database
+  mysql_db:
+    name: ironic_inspector
+    state: present
+    encoding: utf8
+    login_user: root
+    login_password: "{{ passwords.db_root_pass }}"
+
+- name: Grant all privileges for ironic-inspector
+  command: 'mysql -uroot -p{{ passwords.db_root_pass }} -ne "{{ item }}"'
+  with_items:
+    - GRANT ALL PRIVILEGES ON ironic_inspector.* TO 'ironic_inspector'@'localhost' IDENTIFIED BY '{{ passwords.db_root_pass }}'
+    - GRANT ALL PRIVILEGES ON ironic_inspector.* TO 'ironic_inspector'@'%' IDENTIFIED BY '{{ passwords.db_root_pass }}'
+
+- name: Install openstack-ironic-inspector package
+  yum:
+    name: openstack-ironic-inspector
+    state: latest
+
+- name: Configurate inspector.conf
+  ini_file:
+    path: /etc/ironic-inspector/inspector.conf
+    section: "{{ item.section }}"
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+  with_items:
+    - { section: DEFAULT, option: rootwrap_config, value: /etc/ironic-inspector/rootwrap.conf }
+    - { section: DEFAULT, option: auth_strategy, value: noauth }
+    - { section: DEFAULT, option: log_dir, value: /var/log/ironic-inspector }
+    - { section: database, option: connection, value: 'mysql+pymysql://ironic_inspector:"{{ passwords.db_root_pass }}"@127.0.0.1/ironic_inspector?charset=utf8' }
+    - { section: discovery, option: enroll_node_driver, value: pxe_ipmitool }
+    - { section: discovery, option: ipmi_username, value: admin }
+    - { section: discovery, option: ipmi_password, value: "{{ passwords.ipmi_admin_pass }}" }
+    - { section: discovery, option: deploy_kernel, value: "file:///tftpboot/deploy/deploy.vmlinuz" }
+    - { section: discovery, option: deploy_ramdisk, value: "file:///tftpboot/deploy/deploy.initramfs" }
+    - { section: firewall, option: manage_firewall, value: False }
+    - { section: processing, option: ramdisk_logs_dir, value: /var/log/ironic-inspector/ramdisk }
+    - { section: processing, option: add_ports, value: all }
+    - { section: processing, option: keep_ports, value: present }
+    - { section: processing, option: node_not_found_hook, value: enroll }
+    - { section: processing, option: default_processing_hooks, value: "ramdisk_error,root_disk_selection,scheduler,validate_interfaces,capabilities,pci_devices,exhaustive_discovery" }
+
+- name: Create sudoer file
+  copy:
+    src: files/ironic-inspector-rootwrap
+    dest: /etc/sudoers.d/ironic-inspector-rootwrap
+
+- name: Create pxelinux default file
+  template:
+    src: roles/ironic-inspector/templates/default.j2
+    dest: /tftpboot/pxelinux.cfg/default
+
+- name: Sync ironic-inspector db
+  command: ironic-inspector-dbsync --config-file /etc/ironic-inspector/inspector.conf upgrade
+  ignore_errors: True
+
+- name: Start ironic-inspector service
+  service:
+    name: openstack-ironic-inspector
+    enabled: yes
+    state: started

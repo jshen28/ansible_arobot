@@ -1,0 +1,7 @@
+default introspect
+
+label introspect
+kernel deploy/deploy.vmlinuz
+append initrd=deploy/deploy.initramfs ipa-inspection-callback-url=http://{{ ips.server }}:5050/v1/continue systemd.journald.forward_to_console=yes
+
+ipappend 3

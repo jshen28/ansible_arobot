@@ -1,0 +1,62 @@
+---
+
+- name: Create arobot database
+  mysql_db:
+    name: arobot
+    state: present
+    encoding: utf8
+    login_user: root
+    login_password: "{{ passwords.db_root_pass }}"
+
+- name: Grant all privileges for arobot
+  command: 'mysql -uroot -p{{ passwords.db_root_pass }} -ne "{{ item }}"'
+  with_items:
+    - GRANT ALL PRIVILEGES ON arobot.* TO 'arobot'@'localhost' IDENTIFIED BY '{{ passwords.db_root_pass }}'
+    - GRANT ALL PRIVILEGES ON arobot.* TO 'arobot'@'%' IDENTIFIED BY '{{ passwords.db_root_pass }}'
+
+- name: Untar arobot src
+  unarchive:
+    src: files/arobot.tar
+    dest: /opt
+    remote_src: no
+
+- name: Install pkgs
+  yum:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - python-pecan
+    - python-xlwt
+
+- name: Install arobot python libs
+  command: python setup.py develop
+  args:
+    chdir: /opt/arobot/
+
+- name: Create log dir
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - /var/log/arobot
+    - /etc/arobot
+
+- name: Copy arobot.conf
+  template:
+    src: roles/arobot/templates/arobot.conf.j2
+    dest: /etc/arobot/arobot.conf
+
+- name: Sync db
+  command: python dbsync.py
+  args:
+    chdir: /opt/arobot/arobot/cmd/
+
+- name: Copy start script
+  copy:
+    src: files/start_arobot.sh
+    dest: /opt/arobot/
+
+- name: Start arobot
+  command: sh start_arobot.sh
+  args:
+    chdir: /opt/arobot/
