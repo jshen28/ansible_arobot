@@ -27,6 +27,7 @@
   with_items:
     - python-pecan
     - python-xlwt
+    - python-xlrd
 
 - name: Install arobot python libs
   command: python setup.py develop
