@@ -36,11 +36,13 @@
     - { section: discovery, option: deploy_kernel, value: "file:///tftpboot/deploy/deploy.vmlinuz" }
     - { section: discovery, option: deploy_ramdisk, value: "file:///tftpboot/deploy/deploy.initramfs" }
     - { section: firewall, option: manage_firewall, value: False }
+    - { section: ironic, option: auth_strategy, value: noauth }
     - { section: processing, option: ramdisk_logs_dir, value: /var/log/ironic-inspector/ramdisk }
     - { section: processing, option: add_ports, value: all }
     - { section: processing, option: keep_ports, value: present }
     - { section: processing, option: node_not_found_hook, value: enroll }
     - { section: processing, option: default_processing_hooks, value: "ramdisk_error,root_disk_selection,scheduler,validate_interfaces,capabilities,pci_devices,exhaustive_discovery" }
+    - { section: processing, option: power_off, value: false }
 
 - name: Create sudoer file
   copy:
