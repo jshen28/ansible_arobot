@@ -36,12 +36,27 @@
   args:
     chdir: /opt/arobot/
 
+- name: create user arobot
+  user:
+    name: arobot
+    groups:
+      - arobot
+    state: present
+
 - name: Create log dir
   file:
     path: "{{ item }}"
     state: directory
+    owner: arobot
+    group: arobot
   with_items:
     - /var/log/arobot
+
+- name: Create etc directory
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
     - /etc/arobot
 
 - name: Copy arobot.conf
